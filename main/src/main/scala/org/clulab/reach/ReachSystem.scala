@@ -99,7 +99,7 @@ class ReachSystem(
     val resolved = resolveCoref(groundedAndGrouped)
     logger.debug(s"${resolved.size} events after coref: ${display.summarizeMentions(resolved, doc)}")
     // Coref introduced incomplete Mentions that now need to be pruned
-    val complete = MentionFilter.keepMostCompleteMentions(resolved, State(resolved)).map(_.toCorefMention)
+    val complete = MentionFilter.keepMostCompleteMentions(resolved, State(grounded)).map(_.toCorefMention)
     logger.debug(s"${complete.size} events after coref + 2nd MentionFilter.keepMostCompleteMentions: ${display.summarizeMentions(complete, doc)}")
     logger.debug(s"Resolving display...")
     resolveDisplay(complete)
