@@ -31,6 +31,7 @@ object CorefUtils {
     var b: Seq[CorefMention] = Nil
     val seen = mutable.Set[Int]()
     for (x <- ms) {
+      print(s"distinct:${x.text}")
       val lu = altHash(x)
       if (!seen(lu)) {
         b = b :+ x
@@ -63,6 +64,9 @@ object CorefUtils {
     lbls match {
       case binding if lbls contains "Binding" =>
         args.contains("theme") && args("theme").length >= 2 // Binding is not required to be binary anymore (see binding_token_5)
+      case conversion if lbls contains "Conversion" =>
+        args.contains("substrate") && args("substrate").nonEmpty &&
+        args.contains("product") && args("product").nonEmpty
       case simple if lbls contains "SimpleEvent" =>
         args.contains("theme") && args("theme").nonEmpty
       case complex if lbls contains "ComplexEvent" =>

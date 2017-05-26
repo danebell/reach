@@ -304,6 +304,41 @@ class DarpaActions extends Actions with LazyLogging {
     * Requires that the controlled and controller do not overlap
     */
   def splitSimpleEvents(mentions: Seq[Mention], state: State): Seq[Mention] = mentions flatMap {
+    case conv: EventMention if (conv matches "Conversion") & (conv.arguments.keySet contains "cause") =>
+      val causes: Seq[Mention] = conv.arguments("cause")
+      val substrates: Seq[Mention] = conv.arguments("substrate")
+      val products: Seq[Mention] = conv.arguments("product")
+      val argCombos = for (s <- substrates; p <- products) yield (s, p)
+      val (negMods, otherMods) = conv.toBioMention.modifications.partition(_.isInstanceOf[Negation])
+      val nonCauseArgs = conv.arguments - "cause"
+      val controlledArgs = nonCauseArgs.values.flatten.toSet
+
+      val splitEvs = for {
+        (s, p) <- argCombos
+      } yield {
+        val evArgs = conv.arguments - "cause" - "substrate" - "product" ++
+          Map("substrate" -> Seq(s), "product" -> Seq(p))
+        val ev = new BioEventMention(conv.copy(arguments = evArgs), isDirect = true)
+        // modifications other than negations belong to the SimpleEvent
+        ev.modifications = otherMods
+        ev
+      }
+
+      val splitRegs = for {
+        ev <- splitEvs
+        cause <- causes
+        // controller shouldn't overlap with controlled arguments
+        if !controlledArgs.contains(cause)
+      } yield {
+        val regArgs = Map("controlled" -> Seq(ev), "controller" -> Seq(cause))
+        val reg = new BioRelationMention(conv.copy(labels = DarpaActions.REG_LABELS, arguments = regArgs).toRelationMention)
+        // negations should be propagated to the newly created Positive_regulation
+        reg.modifications = negMods
+        reg
+      }
+
+      splitEvs ++ splitRegs
+
     case m: EventMention if (m matches "SimpleEvent") & (m.arguments.keySet contains "cause") =>
       // Do we have a regulation?
       val causes: Seq[Mention] = m.arguments("cause")
