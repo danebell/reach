@@ -318,6 +318,7 @@ class Coref extends LazyLogging {
     val tbms = mentions.filter(_.isInstanceOf[CorefTextBoundMention]).map(_.asInstanceOf[CorefTextBoundMention])
     val sevts = mentions.filter(m => m.isInstanceOf[CorefEventMention] && m.matches("SimpleEvent")).map(_.asInstanceOf[CorefEventMention])
     val cevts = mentions.filter(m => m.matches("ComplexEvent"))
+    val others = mentions.filter(m => m.isInstanceOf[CorefEventMention] && !m.matches("SimpleEvent") && !m.matches("ComplexEvent"))
 
     val resolvedTBMs = resolveTBMs(tbms)
     val tbmSieveMap = tbmSieves(tbms.filter(_.isGeneric))
@@ -435,11 +436,11 @@ class Coref extends LazyLogging {
       // share more complete grounding based on alias map
       mentions.filter(_.isInstanceOf[TextBoundMention]).foreach {
         mention =>
-          val kbRes = mention.grounding.get
-          if (aliases contains kbRes) {
+          val kbRes = mention.grounding
+          if (kbRes.nonEmpty && aliases.contains(kbRes.get)) {
             logger.debug(s"${mention.text} matches " +
-              s"${aliases(kbRes).getOrElse(Nil).map(_.text).mkString("{'", "', '", "}")}")
-            mention.nominate(aliases(kbRes))
+              s"${aliases(kbRes.get).getOrElse(Nil).map(_.text).mkString("{'", "', '", "}")}")
+            mention.nominate(aliases(kbRes.get))
             mention.sieves += "aliasGroundingMatch"
           }
       }
